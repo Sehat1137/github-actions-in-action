@@ -5,6 +5,9 @@ on:
     branches:
       - master
 
+env:
+  IMAGE_REPOSITORY: sehat1137/github-actions-in-action
+
 jobs:
   # lint:
   #   name: "Ruff"
@@ -32,102 +35,95 @@ jobs:
   #     - run: uv run pytest tests
 
   version:
-    name: "Set image name"
+    name: "Set version"
     runs-on: ubuntu-latest
     outputs:
-      image: ${{ steps.get-image-name.outputs.image }}
+      version: ${{ steps.set-version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
       - name: Install python-semantic-release
         run: pip install python-semantic-release
-      - name: Generate Version
-        id: get-image-name
+      - name: Generate version
+        id: set-version
         run: |
-          echo "image-tag=sehat1137/github-actions-in-action:$(semantic-release version --print-last-released)-${{github.run_id}}" >> "$GITHUB_OUTPUT"
+          VERSION=$(semantic-release version --print-last-released)-${{ github.run_id }}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
   build-image:
     name: "Build Docker image"
     runs-on: ubuntu-latest
-    needs: [version]
+    needs: version
+    outputs:
+      image: ${{ env.IMAGE_REPOSITORY }}:${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           driver-opts: network=host
-      - name: Build image
-        id: build
-        uses: docker/build-push-action@v6
+
+      - name: Build and load image
+        uses: docker/build-push-action@v5
         with:
+          context: .
           load: true
-          tags: ${{ needs.version.outputs.image }}
+          tags: ${{ env.image }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  check-image:
-    name: "Check image vulnerabilities"
+      - name: Verify image exists
+        run: |
+          docker image inspect ${{ env.image }} || exit 1
+
+  scan-image:
+    name: "Scan image with Trivy"
+    needs: build-image
     runs-on: ubuntu-latest
-    needs: [build-image]
     steps:
       - name: Set up Docker
         uses: docker/setup-buildx-action@v3
 
-      - name: Inspect image
+      - name: Verify image availability
+        run: |
+          docker image inspect ${{ needs.build-image.outputs.image }} || exit 1
+
+      - name: Scan image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ needs.version.outputs.image }}
-          scan-type: "image"
-          output: trivy-report.json
-          format: json
-          exit-code: 0
+          image-ref: ${{ needs.build-image.outputs.image }}
+          scan-type: image
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+          timeout: 5m
 
-      - name: Upload Vulnerability Scan Results
+      - name: Upload scan report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-report
+          name: trivy-scan-report
           path: trivy-report.json
-          retention-days: 30
-
-      - name: Fail build on High/Critical Vulnerabilities
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ needs.version.outputs.image }}
-          scan-type: "image"
-          format: table
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: 1
-          skip-setup-trivy: true
-
-      - name: Fail build on High/Critical Vulnerabilities
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ needs.version.outputs.image }}
-          scan-type: "image"
-          format: table
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: 1
-          skip-setup-trivy: true
 
   push-image:
-    name: "Push Docker image"
+    name: "Push to Docker Hub"
+    needs: scan-image
     runs-on: ubuntu-latest
-    needs: [check-image]
     steps:
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Push image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
+          context: .
           push: true
-          tags: ${{ needs.version.outputs.image }}
+          tags: ${{ needs.build-image.outputs.image }}
           cache-from: type=gha
