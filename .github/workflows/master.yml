@@ -11,6 +11,8 @@ env:
 jobs:
   version:
     name: "Set version"
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.set-version.outputs.version }}
@@ -24,6 +26,8 @@ jobs:
       - name: Install python-semantic-release
         run: pip install python-semantic-release
       - name: Generate version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         id: set-version
         run: |
           VERSION=$(semantic-release version --skip-build --print)
