@@ -48,7 +48,9 @@ jobs:
         run: pip install python-semantic-release
       - name: Generate Version
         id: get-tag
-        run: echo "image-tag=$(semantic-release version --print-last-released)+${{github.run_id}}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "image-tag=$(semantic-release version --print-last-released)+${{github.run_id}}" >> "$GITHUB_OUTPUT"
+          echo "$(semantic-release version --print-last-released)+${{github.run_id}}"
 
   build-image:
     name: "Build Docker image"
