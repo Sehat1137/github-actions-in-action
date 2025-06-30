@@ -1,0 +1,26 @@
+[project]
+name = "github-actions-in-action"
+version = "0.0.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = ["fastapi==0.115.14", "uvicorn==0.35.0"]
+
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+version_source = "tag"
+upload_to_pypi = false
+commit_message = "chore(release): v{version}"
+
+[tool.semantic_release.commit_parser_options]
+ignore_merge_commits = false
+
+[dependency-groups]
+dev = [
+    "httpx==0.28.1",
+    "pytest==8.4.1",
+    "pytest-asyncio==1.0.0",
+    "pytest-cov==6.2.1",
+    "ruff>=0.12.1",
+]
