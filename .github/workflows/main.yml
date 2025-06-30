@@ -57,10 +57,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: version
     outputs:
-      image: ${{ env.image }}
-    env:
-      image: ${{ env.IMAGE_REPOSITORY }}:${{ needs.version.outputs.version }}
+      image: ${{ steps.set-image.outputs.image }}
     steps:
+      - name: Set image
+        id: set-image
+        run: echo "image=$IMAGE_REPOSITORY:${{ needs.version.outputs.version }}" >> $GITHUB_OUTPUT
+
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
