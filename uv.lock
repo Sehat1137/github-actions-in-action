@@ -101,7 +101,7 @@ wheels = [
 
 [[package]]
 name = "github-actions-in-action"
-version = "0.0.0rc2"
+version = "0.0.0rc3"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },

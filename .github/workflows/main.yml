@@ -31,54 +31,52 @@ jobs:
       - run: uv sync --locked --all-extras --dev
       - run: uv run pytest tests
 
-  release:
-    name: "Bump Version"
-    permissions:
-      contents: write
+  version:
+    name: "Version"
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.get_version.outputs.version }}
+      version: ${{ steps.get-tag.outputs.image-tag }}
     needs: [lint, test]
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
       - name: Install python-semantic-release
         run: pip install python-semantic-release
-
       - name: Generate Version
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        id: get_version
-        run: |
-          semantic-release version --skip-build --prerelease --no-changelog  --no-vcs-release
-          echo "version=$(semantic-release version --print-last-released)" >> "$GITHUB_OUTPUT"
+        id: get-tag
+        run: echo "image-tag=$(semantic-release version --print-last-released)+${{github.run_id}}" >> "$GITHUB_OUTPUT"
 
-  docker:
-    name: "Create image"
+  build-image:
+    name: "Build Docker image"
     runs-on: ubuntu-latest
-    needs: [release]
+    needs: [test]
+    outputs:
+      image-tag: ${{ steps.build.outputs.tags }}
     steps:
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and export
+      - uses: actions/checkout@v4
+      - name: Build image
+        id: build
         uses: docker/build-push-action@v6
         with:
           load: true
-          tags: sehat1137/github-actions-in-action:${{ needs.release.outputs.version }}
+          tags: sehat1137/github-actions-in-action:${{ needs.version.outputs.image-tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  check-image:
+    name: "Check image vulnerabilities"
+    runs-on: ubuntu-latest
+    needs: [build-image]
+    steps:
       - name: Inspect image
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: "fs"
+          image-ref: sehat1137/github-actions-in-action:${{ needs.version.outputs.image-tag }}
+          scan-type: "image"
           output: trivy-report.json
           format: json
-          scan-ref: .
           exit-code: 0
 
       - name: Upload Vulnerability Scan Results
@@ -88,18 +86,30 @@ jobs:
           path: trivy-report.json
           retention-days: 30
 
-      - name: Fail build on High/Criticial Vulnerabilities
+      - name: Fail build on High/Critical Vulnerabilities
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: "fs"
+          image-ref: sehat1137/github-actions-in-action:${{ needs.version.outputs.image-tag }}
+          scan-type: "image"
           format: table
-          scan-ref: .
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: 1
           skip-setup-trivy: true
-      - name: Build and export
+
+  push-image:
+    name: "Push Docker image"
+    runs-on: ubuntu-latest
+    needs: [check-image]
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Push image
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: sehat1137/github-actions-in-action:${{ needs.release.outputs.version }}
+          tags: sehat1137/github-actions-in-action:${{ needs.version.outputs.image-tag }}
+          cache-from: type=gha
