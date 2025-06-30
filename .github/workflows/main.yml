@@ -1,0 +1,63 @@
+name: main
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  lint:
+    name: "Ruff"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked --all-extras --dev
+      - uses: astral-sh/ruff-action@v3
+        with:
+          src: >-
+            ./application
+            ./tests
+      - run: ruff format
+      - run: ruff check
+  test:
+    name: "Pytest"
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked --all-extras --dev
+      - run: uv run pytest tests
+  release:
+    name: "Bump Version"
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install python-semantic-release
+        run: pip install python-semantic-release
+
+      - name: Generate Version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: get_version
+        run: |
+          semantic-release version --skip-build --prerelease --no-changelog  --no-vcs-release
+          echo "version=$(semantic-release version --print-last-released)" >> "$GITHUB_OUTPUT"
+
+  create-image:
+    name: "Create image"
+    runs-on: ubuntu-latest
+    needs: [release]
+    steps:
+      - run: echo "my-image:${{ needs.release.outputs.version }}"
