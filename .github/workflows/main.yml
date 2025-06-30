@@ -92,7 +92,7 @@ jobs:
         with:
           name: image
           path: ${{ runner.temp }}
-          run: docker load -i ${{ runner.temp }}/image.tar
+      - run: docker load -i ${{ runner.temp }}/image.tar
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -115,7 +115,7 @@ jobs:
         with:
           name: image
           path: ${{ runner.temp }}
-          run: docker load -i ${{ runner.temp }}/image.tar
+      - run: docker load -i ${{ runner.temp }}/image.tar
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
