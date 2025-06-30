@@ -76,6 +76,7 @@ jobs:
     steps:
       - name: Set up Docker
         uses: docker/setup-buildx-action@v3
+
       - name: Inspect image
         uses: aquasecurity/trivy-action@master
         with:
@@ -91,6 +92,17 @@ jobs:
           name: trivy-report
           path: trivy-report.json
           retention-days: 30
+
+      - name: Fail build on High/Critical Vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ needs.version.outputs.image }}
+          scan-type: "image"
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+          skip-setup-trivy: true
 
       - name: Fail build on High/Critical Vulnerabilities
         uses: aquasecurity/trivy-action@master
