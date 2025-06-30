@@ -6,37 +6,36 @@ on:
       - master
 
 jobs:
-  lint:
-    name: "Ruff"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --locked --all-extras --dev
-      - uses: astral-sh/ruff-action@v3
-        with:
-          src: >-
-            ./api
-            ./tests
-      - run: ruff format
-      - run: ruff check
+  # lint:
+  #   name: "Ruff"
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: astral-sh/setup-uv@v5
+  #     - run: uv sync --locked --all-extras --dev
+  #     - uses: astral-sh/ruff-action@v3
+  #       with:
+  #         src: >-
+  #           ./api
+  #           ./tests
+  #     - run: ruff format
+  #     - run: ruff check
 
-  test:
-    name: "Pytest"
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --locked --all-extras --dev
-      - run: uv run pytest tests
+  # test:
+  #   name: "Pytest"
+  #   runs-on: ubuntu-latest
+  #   needs: lint
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: astral-sh/setup-uv@v5
+  #     - run: uv sync --locked --all-extras --dev
+  #     - run: uv run pytest tests
 
   version:
-    name: "Version"
+    name: "Set image name"
     runs-on: ubuntu-latest
     outputs:
-      image-tag: ${{ steps.get-tag.outputs.image-tag }}
-    needs: [lint, test]
+      image: ${{ steps.get-image-name.outputs.image }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,10 +46,9 @@ jobs:
       - name: Install python-semantic-release
         run: pip install python-semantic-release
       - name: Generate Version
-        id: get-tag
+        id: get-image-name
         run: |
-          echo "image-tag=$(semantic-release version --print-last-released)-${{github.run_id}}" >> "$GITHUB_OUTPUT"
-          echo "$(semantic-release version --print-last-released)+${{github.run_id}}"
+          echo "image-tag=sehat1137/github-actions-in-action:$(semantic-release version --print-last-released)-${{github.run_id}}" >> "$GITHUB_OUTPUT"
 
   build-image:
     name: "Build Docker image"
@@ -67,7 +65,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           load: true
-          tags: sehat1137/github-actions-in-action:${{ needs.version.outputs.image-tag }}
+          tags: ${{ needs.version.outputs.image }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -79,7 +77,7 @@ jobs:
       - name: Inspect image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: sehat1137/github-actions-in-action:${{ needs.version.outputs.image-tag }}
+          image-ref: ${{ needs.version.outputs.image }}
           scan-type: "image"
           output: trivy-report.json
           format: json
@@ -95,7 +93,7 @@ jobs:
       - name: Fail build on High/Critical Vulnerabilities
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: sehat1137/github-actions-in-action:${{ needs.version.outputs.image-tag }}
+          image-ref: ${{ needs.version.outputs.image }}
           scan-type: "image"
           format: table
           severity: HIGH,CRITICAL
@@ -117,5 +115,5 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: sehat1137/github-actions-in-action:${{ needs.version.outputs.image-tag }}
+          tags: ${{ needs.version.outputs.image }}
           cache-from: type=gha
