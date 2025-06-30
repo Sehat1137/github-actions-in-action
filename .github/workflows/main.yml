@@ -35,7 +35,7 @@ jobs:
     name: "Version"
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.get-tag.outputs.image-tag }}
+      image-tag: ${{ steps.get-tag.outputs.image-tag }}
     needs: [lint, test]
     steps:
       - uses: actions/checkout@v4
