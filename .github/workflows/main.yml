@@ -77,7 +77,7 @@ jobs:
         with:
           context: .
           load: true
-          tags: ${{ env.image }}
+          tags: ${{ steps.set-image.outputs.image }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
