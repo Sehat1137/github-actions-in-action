@@ -80,7 +80,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Verify image exists
-        run: docker image inspect ${{ steps.set-image-tag.outputs.image-tag }} || exit 1
+        run: docker image inspect ${{ steps.set-image.outputs.image }} || exit 1
 
   scan-image:
     name: "Scan image with Trivy"
