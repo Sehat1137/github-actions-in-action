@@ -49,7 +49,7 @@ jobs:
       - name: Generate Version
         id: get-tag
         run: |
-          echo "image-tag=$(semantic-release version --print-last-released)+${{github.run_id}}" >> "$GITHUB_OUTPUT"
+          echo "image-tag=$(semantic-release version --print-last-released)-${{github.run_id}}" >> "$GITHUB_OUTPUT"
           echo "$(semantic-release version --print-last-released)+${{github.run_id}}"
 
   build-image:
