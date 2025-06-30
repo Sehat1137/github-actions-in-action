@@ -79,7 +79,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: myimage
+          name: image
           path: ${{ runner.temp }}/image.tar
 
   scan-image:
