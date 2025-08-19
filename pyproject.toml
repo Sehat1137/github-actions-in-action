@@ -6,13 +6,6 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = ["fastapi==0.115.14", "uvicorn==0.35.0"]
 
-
-[tool.semantic_release]
-version_toml = ["pyproject.toml:project.version"]
-version_source = "tag"
-upload_to_pypi = false
-commit_message = "chore(release): v{version}"
-
 [tool.semantic_release.commit_parser_options]
 ignore_merge_commits = false
 
