@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.2.0 (2025-08-19)
+
+### Chores
+
+- **release**: Release v1.1.1
+  ([`9939aae`](https://github.com/Sehat1137/github-actions-in-action/commit/9939aae58f05991ce28072d0886d1a7e1da8027f))
+
+### Features
+
+- Add router description
+  ([`aa1ae7a`](https://github.com/Sehat1137/github-actions-in-action/commit/aa1ae7ac4e4c52f2f494707d64d5d1d2de8aeec2))
+
+
 ## v1.1.1 (2025-08-19)
 
 ### Bug Fixes
